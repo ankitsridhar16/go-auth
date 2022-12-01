@@ -6,6 +6,7 @@ import (
 )
 
 func main() {
+	// routes for handling network requests
 	http.HandleFunc("/signin", Signin)
 	http.HandleFunc("/welcome", Welcome)
 	http.HandleFunc("/refresh", Refresh)
