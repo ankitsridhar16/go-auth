@@ -12,28 +12,34 @@ const (
 	SessionCookieName = "session_token"
 )
 
-// TODO: Convert to a DB
+// TODO: Convert to a DB.
 var users = map[string]string{
 	"user1": "password1",
 	"user2": "password2",
 }
 
+// TODO: Covert to a DB.
 var sessions = map[string]session{}
 
+// Session struct for storing session data for a user.
 type session struct {
 	username string
 	expiry   time.Time
 }
 
-func (s session) isExpired() bool {
-	return s.expiry.Before(time.Now())
-}
-
+// Credentials struct for parsing credentials json data to proper types.
 type Credentials struct {
 	Password string `json:"password"`
 	Username string `json:"username"`
 }
 
+// Function to check if the session has expired or not.
+func (s session) isExpired() bool {
+	return s.expiry.Before(time.Now())
+}
+
+// Signin handler decodes the request body validates the password and
+// generates a new session for the user and returns a cookie with session token.
 func Signin(w http.ResponseWriter, r *http.Request) {
 	var creds Credentials
 	err := json.NewDecoder(r.Body).Decode(&creds)
@@ -62,6 +68,8 @@ func Signin(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// Welcome handler validates a cookie from the request header and checks for a valid session
+// then prints a welcome message as a response
 func Welcome(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie(SessionCookieName)
 	if err != nil {
@@ -87,6 +95,8 @@ func Welcome(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(fmt.Sprintf("Welcome %s!", userSession.username)))
 }
 
+// Refresh handler validates a cookie from headers and checks for a valid session based
+// on the expiry and if session has expired generate a new session for the user.
 func Refresh(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie(SessionCookieName)
 	if err != nil {
@@ -126,6 +136,8 @@ func Refresh(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// Logout handler validates a cookie from a header and then delete the session for the user
+// from the sessions list.
 func Logout(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie(SessionCookieName)
 	if err != nil {
