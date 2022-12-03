@@ -1,0 +1,25 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "go run github.com/prisma/prisma-client-go"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:dev.db"
+}
+
+model Users {
+  id       String @id @default(uuid())
+  username String
+  password String
+  email    String @unique
+}
+
+model Sessions {
+  sessionToken String   @id
+  username     String
+  email        String
+  expiry       DateTime
+}
