@@ -1,9 +1,12 @@
 package main
 
 import (
+	"ankitsridhar/auth/repository"
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
 	"net/http"
 	"time"
 )
@@ -29,13 +32,57 @@ type session struct {
 
 // Credentials struct for parsing credentials json data to proper types.
 type Credentials struct {
-	Password string `json:"password"`
 	Username string `json:"username"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
 }
 
 // Function to check if the session has expired or not.
 func (s session) isExpired() bool {
 	return s.expiry.Before(time.Now())
+}
+
+func Signup(w http.ResponseWriter, r *http.Request) {
+	var ctx context.Context
+	var creds Credentials
+	err := json.NewDecoder(r.Body).Decode(&creds)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	userExits := repository.CheckIfUserEmailExists(ctx, creds.Email)
+	if userExits == true {
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+
+	hashedPassword, errHash := bcrypt.GenerateFromPassword([]byte(creds.Password), 16)
+	if errHash != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	userSignedUp, errSignup := repository.Signup(ctx, creds.Username, creds.Email, string(hashedPassword))
+	if errSignup != nil && userSignedUp == false {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	sessionToken := uuid.NewString()
+	expiresAt := time.Now().Add(120 * time.Second)
+	userSessionCreated, errCreateSession := repository.CreateUserSession(ctx, sessionToken,
+		creds.Username, creds.Email, expiresAt)
+	if errCreateSession != nil && userSessionCreated == false {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:    SessionCookieName,
+		Value:   sessionToken,
+		Expires: expiresAt,
+	})
 }
 
 // Signin handler decodes the request body validates the password and
